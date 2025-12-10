@@ -1,0 +1,14 @@
+[
+  {
+    "id":1,
+    "email": "rizka@gmail.com",
+    "password": "1234567",
+    "role":"staff"
+  },
+  {
+    "id":2,
+    "email": "Ilham@gmail.com",
+    "password": "staff",
+    "role": "Staff"
+  }
+]
