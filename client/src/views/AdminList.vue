@@ -6,12 +6,10 @@ import http from "@/libraries/http";
 
 const router = useRouter();
 const users = ref([]);
-const isError = ref(false);
-
-const fetchAllMember = async () => {
+const fetchAdmin = async () => {
   
   try {
-    const response = await http.get('/allstaff', {
+    const response = await http.get('/admin', {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('access_token')}`
       }
@@ -20,32 +18,29 @@ const fetchAllMember = async () => {
     console.log(response);
     
       users.value = response.data;
-      isError.value = false;
 
 
     } catch (error) {
-        isError.value = true;
         Swal.fire({
           title: 'Error!',
-          text: error.response.data.message,
+          text: error.response?.data?.message ?? "Terjadi kesalahan",
           icon: 'error',
           confirmButtonText: 'Close'
-        }).then(() => {
-        // Redirect SETELAH user menutup alert
-        if (isError.value === true) {
-          router.push("/adminlist");
-        }
-      })
+        })
      }
   };
 
-   
-  if (isError.value === true) {
-    router.push("/adminlist");
-  }
+    const goToAdmin = () => {
+      router.push("/");    
+    }
+
+  ;
+
+    
+
 
   onMounted(() => {
-    fetchAllMember();
+    fetchAdmin();
   });
 
 </script>
@@ -53,7 +48,7 @@ const fetchAllMember = async () => {
 <template>
   <div class="home-container">
     <div class="card">
-      <h1 class="title">Dashboard</h1>
+      <h1 class="title">Data Admin</h1>
       <p class="text">Selamat datang di sistem manajemen data</p>
       
       <div class="stats">
@@ -76,7 +71,12 @@ const fetchAllMember = async () => {
           </div>
         </div>
       </div>
-
+      <Button 
+          label="All member" 
+          @click="goToAdmin"
+          severity="primary"
+          class="login-button"
+        />
     </div>
   </div>
 </template>

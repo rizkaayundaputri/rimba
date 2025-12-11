@@ -80,7 +80,7 @@ const handleLogin = async () => {
       showConfirmButton: false,
     });
 
-      router.push("/");
+      router.push("/adminlist");
 
     //   if (localStorage.getItem('access_token')) {
     //     router.push('/');
