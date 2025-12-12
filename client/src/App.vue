@@ -19,6 +19,17 @@ const handleLogout = () => {
 const toggleSubmenu = (moduleId) => {
   openSubmenu.value = openSubmenu.value === moduleId ? null : moduleId
 }
+
+// Check if route exists in router
+const routeExists = (routeName) => {
+  if (!routeName) return false
+  try {
+    router.resolve({ name: routeName })
+    return true
+  } catch (e) {
+    return false
+  }
+}
 </script>
 
 <template>
@@ -36,7 +47,7 @@ const toggleSubmenu = (moduleId) => {
           <li v-for="module in authStore.sidebarMenus" :key="module.id" class="menu-item">
             <!-- Menu tanpa children -->
             <router-link 
-              v-if="module.routeName && (!module.children || module.children.length === 0)" 
+              v-if="routeExists(module.routeName) && (!module.children || module.children.length === 0)" 
               :to="{ name: module.routeName }"
               class="menu-link"
             >
@@ -57,12 +68,16 @@ const toggleSubmenu = (moduleId) => {
               <ul class="submenu" v-show="openSubmenu === module.id">
                 <li v-for="child in module.children" :key="child.id">
                   <router-link 
-                    v-if="child.routeName"
+                    v-if="routeExists(child.routeName)"
                     :to="{ name: child.routeName }"
                     class="submenu-link"
                   >
                     {{ child.name }}
                   </router-link>
+                  <!-- Show as text if route doesn't exist -->
+                  <span v-else class="submenu-link disabled">
+                    {{ child.name }}
+                  </span>
                 </li>
               </ul>
             </div>
@@ -238,7 +253,13 @@ body {
   transition: all 0.3s ease;
 }
 
-.submenu-link:hover {
+.submenu-link.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.submenu-link:not(.disabled):hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
 }

@@ -23,18 +23,10 @@ const { hobbies } = storeToRefs(hobbyStore)
 const { fetchHobbies } = hobbyStore
 
 const fetchAllMember = async () => {
-  
   try {
-    const response = await http.get('/allstaff', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    });
-    console.log("TOKEN:", localStorage.getItem("access_token"))
-    console.log(response);
-    
-      users.value = response.data;
-      isError.value = false;
+    const response = await http.get('/allstaff');
+    users.value = response.data;
+    isError.value = false;
 
 
     } catch (error) {

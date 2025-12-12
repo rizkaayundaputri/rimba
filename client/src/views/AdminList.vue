@@ -1,37 +1,28 @@
 <script setup>
-import { ref, onMounted} from "vue";
+import { ref, onMounted } from "vue";
 import Swal from "sweetalert2";
 import http from "@/libraries/http";
 
 const users = ref([]);
+
 const fetchAdmin = async () => {
-  
   try {
-    const response = await http.get('/admin', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    });
-    console.log("TOKEN:", localStorage.getItem("access_token"))
-    console.log(response);
-    
-      users.value = response.data;
+    const response = await http.get('/admin');
+    users.value = response.data;
+  } catch (error) {
+    Swal.fire({
+      title: 'Error!',
+      text: error.response?.data?.message ?? "Terjadi kesalahan",
+      icon: 'error',
+      confirmButtonText: 'Close'
+    })
+  }
+};
 
 
-    } catch (error) {
-        Swal.fire({
-          title: 'Error!',
-          text: error.response?.data?.message ?? "Terjadi kesalahan",
-          icon: 'error',
-          confirmButtonText: 'Close'
-        })
-     }
-  };
-
-
-  onMounted(() => {
-    fetchAdmin();
-  });
+onMounted(() => {
+  fetchAdmin();
+});
 
 
 </script>

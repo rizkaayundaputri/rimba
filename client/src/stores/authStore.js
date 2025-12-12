@@ -5,7 +5,7 @@ import axios from 'axios'
 export const useAuthStore = defineStore('auth', () => {
   
   const user = ref(null)
-  const token = ref(localStorage.getItem('token') || null)
+  const token = ref(localStorage.getItem('access_token') || null)
   const groupAccess = ref(null)
   const accessibleModules = ref([])
   const isLoading = ref(false)
@@ -54,7 +54,7 @@ export const useAuthStore = defineStore('auth', () => {
       token.value = response.data.access_token
       user.value = response.data.user
       
-      localStorage.setItem('token', token.value)
+      localStorage.setItem('access_token', token.value) // For backward compatibility
       axios.defaults.headers.common['Authorization'] = `Bearer ${token.value}`
       
       await fetchUserData()
@@ -110,7 +110,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     groupAccess.value = null
     accessibleModules.value = []
-    localStorage.removeItem('token')
+    localStorage.removeItem('access_token')
     delete axios.defaults.headers.common['Authorization']
   }
 

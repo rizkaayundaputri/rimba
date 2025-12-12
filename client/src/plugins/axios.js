@@ -18,7 +18,7 @@ axios.defaults.baseURL = 'http://localhost:3000'
 
 axios.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('access_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -38,7 +38,9 @@ axios.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired atau invalid
-      localStorage.removeItem('token')
+      // localStorage.removeItem('token')
+      localStorage.removeItem('access_token')
+      delete axios.defaults.headers.common['Authorization']
       window.location.href = '/login'
     }
     return Promise.reject(error)
