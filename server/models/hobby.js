@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
+  class Hobby extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
@@ -11,52 +11,36 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      User.belongsTo(models.GroupAccess, {
-        foreignKey: 'groupAccessId'
-      })
     }
   }
-  User.init({
-    email: {
+  Hobby.init({
+    name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique:{
-        args : true,
-        msg : 'Email already exist'
-      },
       validate: {
         notNull:{
-          msg: 'Email is required'
+          msg: 'Name is required'
         },
         notEmpty:{
-          msg: 'Email is required'
-        },
-        isEmail:{
-          args: true,
-          msg: 'Email not valid'
+          msg: 'Name is required'
         }
       }
     },
-    password: {
+    description: {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        notNull : {
-          msg : 'Password is required'
+        notNull:{
+          msg: 'Description is required'
         },
         notEmpty:{
-          msg: 'Password is required'
+          msg: 'Description is required'
         }
       }
-    },
-    role: DataTypes.STRING,
-    groupAccessId: {
-      type: DataTypes.INTEGER,
-      allowNull: true
     }
   }, {
     sequelize,
-    modelName: 'User',
+    modelName: 'Hobby',
   });
-  return User;
+  return Hobby;
 };

@@ -18,8 +18,12 @@ app.post('/login',UserController.login)
 
 app.use(authentication)
 
+app.get('/auth/me', UserController.getProfile)
 app.get('/allstaff',isStaff,DataController.getData)
 app.get('/admin',DataController.getDataAdmin)
+app.post('/hobby', DataController.addHobby)
+app.get('/hobby',isStaff, DataController.getHobby)
+
 
 app.use(errorHandler)
 
