@@ -55,41 +55,53 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/authStore";
 import Swal from "sweetalert2";
-import http from "@/libraries/http";
 
 const router = useRouter();
+const authStore = useAuthStore();
 const email = ref("");
 const password = ref("");
 
 const handleLogin = async () => {
-  
   try {
-    const res = await http.post("/login", {
-      email: email.value,
-      password: password.value,
-    });
+    const result = await authStore.login(email.value, password.value);
 
-    localStorage.setItem("access_token", res.data.access_token);
+    if (result.success) {
+      Swal.fire({
+        icon: "success",
+        title: "Login Berhasil",
+        text: "Anda akan diarahkan ke halaman utama",
+        timer: 1000,
+        showConfirmButton: false,
+      });
 
-    Swal.fire({
-      icon: "success",
-      title: "Login Berhasil",
-      text: "Anda akan diarahkan ke halaman utama",
-      timer: 1000,
-      showConfirmButton: false,
-    });
-
-      router.push("/adminlist");
-
-    //   if (localStorage.getItem('access_token')) {
-    //     router.push('/');
-    // }
-
+      // Redirect ke route pertama yang accessible atau home
+      
+      if (authStore.sidebarMenus.length > 0) {
+        const firstMenu = authStore.sidebarMenus[0];
+        if (firstMenu.routeName) {
+          router.push({ name: firstMenu.routeName });
+        } else if (firstMenu.children && firstMenu.children.length > 0) {
+          router.push({ name: firstMenu.children[0].routeName });
+        } else {
+          router.push('/');
+        }
+      } else {
+        router.push('/');
+      }
+    } else {
+      Swal.fire({
+        title: 'Error!',
+        text: result.message || 'Login failed',
+        icon: 'error',
+        confirmButtonText: 'Close'
+      });
+    }
   } catch (error) {
     Swal.fire({
       title: 'Error!',
-      text: error.response.data.message,
+      text: error.message || 'An error occurred',
       icon: 'error',
       confirmButtonText: 'Close'
     });

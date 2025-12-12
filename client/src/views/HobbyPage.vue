@@ -1,67 +1,45 @@
 <script setup>
-import { ref, onMounted} from "vue";
-import Swal from "sweetalert2";
-import http from "@/libraries/http";
+import { useHobbyStore } from "@/stores/hobbyStore";
+import { onMounted, computed } from "vue";
 
-const users = ref([]);
-const fetchAdmin = async () => {
-  
-  try {
-    const response = await http.get('/admin', {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-      }
-    });
-    console.log("TOKEN:", localStorage.getItem("access_token"))
-    console.log(response);
-    
-      users.value = response.data;
+const hobbyStore = useHobbyStore()
 
+const hobbies = computed(() => hobbyStore.hobbies)
 
-    } catch (error) {
-        Swal.fire({
-          title: 'Error!',
-          text: error.response?.data?.message ?? "Terjadi kesalahan",
-          icon: 'error',
-          confirmButtonText: 'Close'
-        })
-     }
-  };
-
-
-  onMounted(() => {
-    fetchAdmin();
-  });
-
+onMounted(() => {
+  hobbyStore.fetchHobbies();
+});
 
 </script>
 
 <template>
   <div class="home-container">
     <div class="card">
-      <h1 class="title">Data Admin</h1>
-      <p class="text">Selamat datang di sistem manajemen data</p>
+      <h1 class="title">Dashboard Hobi </h1>
+      <p class="text">Daftar Hobi yang Tersedia</p>
       
       <div class="stats">
         <div class="stat-item">
-          <span class="stat-label">Total Members:</span>
-          <span class="stat-value">{{ users.length }}</span>
+          <span class="stat-label">Total Hobbies:</span>
+          <span class="stat-value">{{ hobbies.length }}</span>
         </div>
       </div>
 
       <div class="members-list">
-        <h2>Daftar Member</h2>
+        <h2>Daftar Hobi</h2>
         <div 
-          v-for="user in users"
-          :key="user.email"
+          v-for="hobby in hobbies"
+          :key="hobby.id"
           class="member-card"
         >
           <div class="member-info">
-            <p class="member-email">{{ user.email }}</p>
-            <p class="badge">{{ user.role }}</p>
+            <p class="member-email">{{ hobby.name }}</p>
+            <p class="badge">{{ hobby.description }}</p>
           </div>
+
         </div>
       </div>
+
     </div>
   </div>
 
@@ -70,7 +48,14 @@ const fetchAdmin = async () => {
 
 <style scoped>
 
-
+.login-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 10px;
+  transition: all 0.3s ease;
+}
 
 .home-container {
   padding: 20px;
@@ -137,11 +122,11 @@ const fetchAdmin = async () => {
 }
 
 .member-card {
-  padding: 18px 15px;
+  padding: 15px;
   background: #f8f9fa;
-  border-radius: 10px;
-  margin-bottom: 16px;  
-  border: 1px solid #e2e2e2;  ;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
 }
 
 .member-card:hover {
@@ -171,4 +156,5 @@ const fetchAdmin = async () => {
   color: #495057;
   margin: 0;
 }
+
 </style>
