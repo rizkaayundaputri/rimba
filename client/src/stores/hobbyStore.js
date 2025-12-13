@@ -20,7 +20,6 @@ export const useHobbyStore = defineStore('hobby', () => {
     console.log(response);
     
       hobbies.value = response.data;
-      console.log("=== TES: Apakah store berfungsi? ===")
 
     } catch (error) {
         Swal.fire({

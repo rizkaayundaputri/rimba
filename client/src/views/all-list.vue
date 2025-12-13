@@ -1,28 +1,63 @@
 <script setup>
 import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import http from "@/libraries/http";
+import { useHobbyStore } from "@/stores/hobbyStore";
+import { storeToRefs } from "pinia" 
 
+const router = useRouter();
 const users = ref([]);
+const isError = ref(false);
 
-const fetchAdmin = async () => {
+
+const hobbyStore =  useHobbyStore()
+
+//reactive
+// Wajib pakai storeToRefs untuk state Pinia
+//mengambil nilai, bukan reactive reference → makanya template tidak listen perubahan state
+//storeToRefs() mengubah semua state store menjadi ref() yang reactive.
+const { hobbies } = storeToRefs(hobbyStore)
+
+// action tidak pakai storeToRefs
+const { fetchHobbies } = hobbyStore
+
+const fetchAllMember = async () => {
   try {
-    const response = await http.get('/admin');
+    const response = await http.get('/allstaff', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      }
+    });
     users.value = response.data;
-  } catch (error) {
-    Swal.fire({
-      title: 'Error!',
-      text: error.response?.data?.message ?? "Terjadi kesalahan",
-      icon: 'error',
-      confirmButtonText: 'Close'
-    })
-  }
-};
+    isError.value = false;
 
 
-onMounted(() => {
-  fetchAdmin();
-});
+    } catch (error) {
+        isError.value = true;
+        Swal.fire({
+          title: 'Error!',
+          text: error.response.data.message,
+          icon: 'error',
+          confirmButtonText: 'Close'
+        })
+        router.push("/adminlist");      
+     }
+  };
+
+
+  onMounted(() => {
+    fetchAllMember(); 
+    fetchHobbies();
+  });
+
+  
+
+
+// Hobby Store
+
+
+
 
 
 </script>
@@ -30,7 +65,7 @@ onMounted(() => {
 <template>
   <div class="home-container">
     <div class="card">
-      <h1 class="title">Data Admin</h1>
+      <h1 class="title">Dashboard</h1>
       <p class="text">Selamat datang di sistem manajemen data</p>
       
       <div class="stats">
@@ -44,7 +79,7 @@ onMounted(() => {
         <h2>Daftar Member</h2>
         <div 
           v-for="user in users"
-          :key="user.email"
+          :key="user.id"
           class="member-card"
         >
           <div class="member-info">
@@ -53,15 +88,54 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
     </div>
   </div>
+
+  <div class="home-container">
+    <div class="card">
+      <h1 class="title">Dashboard Hobi </h1>
+      <p class="text">Daftar Hobi yang Tersedia</p>
+      
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-label">Total Hobbies:</span>
+          <span class="stat-value">{{ hobbies.length }}</span>
+        </div>
+      </div>
+
+      <div class="members-list">
+        <h2>Daftar Hobi</h2>
+        <div 
+          v-for="hobby in hobbies"
+          :key="hobby.id"
+          class="member-card"
+        >
+          <div class="member-info">
+            <p class="member-email">{{ hobby.name }}</p>
+            <p class="badge">{{ hobby.description }}</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 
 </template>
 
 
 <style scoped>
 
-
+.login-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 10px;
+  transition: all 0.3s ease;
+}
 
 .home-container {
   padding: 20px;
@@ -128,11 +202,11 @@ onMounted(() => {
 }
 
 .member-card {
-  padding: 18px 15px;
+  padding: 15px;
   background: #f8f9fa;
-  border-radius: 10px;
-  margin-bottom: 16px;  
-  border: 1px solid #e2e2e2;  ;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
 }
 
 .member-card:hover {
@@ -162,4 +236,5 @@ onMounted(() => {
   color: #495057;
   margin: 0;
 }
+
 </style>

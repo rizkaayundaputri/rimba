@@ -136,6 +136,14 @@ class UserController{
   }
 }
 
+  static async getRoutes(req,res,next){
+    try {
+      const routes = await Module.findAll({ where: { isActive: true } })
+      res.json(routes)
+    } catch (error) {
+      next(error)
+    }
+ }
 }
 
 module.exports = UserController

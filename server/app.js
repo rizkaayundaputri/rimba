@@ -6,7 +6,7 @@ const authentication = require('./middlewares/authentication')
 const DataController = require('./controllers/dataController')
 const isStaff = require('./middlewares/authorization')
 const app = express()
-const port = process.env.PORT || 3000 
+const port = process.env.PORT 
 const cors = require('cors')
 const ModuleController = require('./controllers/moduleController')
 const groupAccessModuleController = require('./controllers/groupAccessModuleController')
@@ -15,8 +15,9 @@ app.use(cors())
 app.use(express.urlencoded({extended:true}))
 app.use(express.json())
 
-
+app.get('/route', UserController.getRoutes)
 app.post('/login',UserController.login)
+
 
 app.use(authentication)
 
@@ -29,10 +30,10 @@ app.get('/module', isStaff, ModuleController.getModule)
 app.post('/module', isStaff, ModuleController.addModule)
 app.delete('/module/:id', isStaff, ModuleController.deleteModule)
 app.put('/module/:id', isStaff, ModuleController.updateModule)
-app.get('/group-access-modules', isStaff, groupAccessModuleController.getGroupAccessModules)
-app.post('/group-access-modules', isStaff, groupAccessModuleController.addGroupAccessModule)
-app.delete('/group-access-modules/:id', isStaff, groupAccessModuleController.deleteGroupAccessModule)
-app.put('/group-access-modules/:id', isStaff, groupAccessModuleController.updateGroupAccessModule)
+app.get('/group-access-module', isStaff, groupAccessModuleController.getGroupAccessModules)
+app.post('/group-access-module', isStaff, groupAccessModuleController.addGroupAccessModule)
+app.delete('/group-access-module/:id', isStaff, groupAccessModuleController.deleteGroupAccessModule)
+app.put('/group-access-module/:id', isStaff, groupAccessModuleController.updateGroupAccessModule)
 
 
 app.use(errorHandler)

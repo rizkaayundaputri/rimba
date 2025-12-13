@@ -2,13 +2,16 @@
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
 import { onMounted, ref } from 'vue'
+import { initRoutesFromDB } from './router'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const openSubmenu = ref(null)
 
-onMounted(() => {
+onMounted(async() => {
   authStore.initAuth()
+  await initRoutesFromDB()  // pastikan semua routes dynamic terdaftar
+
 })
 
 const handleLogout = () => {
@@ -20,7 +23,7 @@ const toggleSubmenu = (moduleId) => {
   openSubmenu.value = openSubmenu.value === moduleId ? null : moduleId
 }
 
-// Check if route exists in router
+// Cek jika route ada di router
 const routeExists = (routeName) => {
   if (!routeName) return false
   try {

@@ -44,10 +44,10 @@ class groupAccessModuleController {
       await GroupAccessModule.create({ 
         groupAccessId, 
         moduleId, 
-        canCreate: canCreate,
-        canRead: canRead,
-        canUpdate: canUpdate, 
-        canDelete: canDelete 
+        canCreate,  
+        canRead,
+        canUpdate, 
+        canDelete 
       });
       
       res.status(201).json({ message: 'Group access module added successfully!' });
