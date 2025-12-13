@@ -8,6 +8,8 @@ const isStaff = require('./middlewares/authorization')
 const app = express()
 const port = process.env.PORT || 3000 
 const cors = require('cors')
+const ModuleController = require('./controllers/moduleController')
+const groupAccessModuleController = require('./controllers/groupAccessModuleController')
 
 app.use(cors())
 app.use(express.urlencoded({extended:true}))
@@ -23,6 +25,14 @@ app.get('/allstaff',isStaff,DataController.getData)
 app.get('/admin',DataController.getDataAdmin)
 app.post('/hobby', DataController.addHobby)
 app.get('/hobby',isStaff, DataController.getHobby)
+app.get('/module', isStaff, ModuleController.getModule)
+app.post('/module', isStaff, ModuleController.addModule)
+app.delete('/module/:id', isStaff, ModuleController.deleteModule)
+app.put('/module/:id', isStaff, ModuleController.updateModule)
+app.get('/group-access-modules', isStaff, groupAccessModuleController.getGroupAccessModules)
+app.post('/group-access-modules', isStaff, groupAccessModuleController.addGroupAccessModule)
+app.delete('/group-access-modules/:id', isStaff, groupAccessModuleController.deleteGroupAccessModule)
+app.put('/group-access-modules/:id', isStaff, groupAccessModuleController.updateGroupAccessModule)
 
 
 app.use(errorHandler)

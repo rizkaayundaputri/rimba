@@ -21,6 +21,12 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   GroupAccessModule.init({
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+      allowNull: false
+    },
     groupAccessId: DataTypes.INTEGER,
     moduleId: DataTypes.INTEGER,
     canCreate: {
@@ -29,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     canRead: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true
+      defaultValue: false
     },
     canUpdate: {
       type: DataTypes.BOOLEAN,
