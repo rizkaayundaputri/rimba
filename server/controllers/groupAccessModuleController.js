@@ -14,6 +14,36 @@ class groupAccessModuleController {
       const result = groupAccessModules.map(item => ({
         id: item.id,
         groupAccessId: item.groupAccessId,
+        groupAccessName: item.GroupAccess.name,
+        moduleId: item.moduleId,
+        moduleName: item.Module.name,
+        canCreate: item.canCreate,
+        canRead: item.canRead,
+        canUpdate: item.canUpdate,
+        canDelete: item.canDelete
+        }));
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getGroupAccessModuleById(req, res, next) { 
+    try {
+      const { id } = req.params;
+      const groupAccessModule = await GroupAccessModule.findByPk(id, {
+        attributes: { exclude: ['createdAt', 'updatedAt'] },
+        include: [
+          { model: GroupAccess, attributes: ['id', 'name']},
+          { model: Module, attributes: ['id', 'name']}
+        ]
+      });
+      if (!groupAccessModule) {
+        throw { name: 'NotFound', message: 'Group access module not found' };
+      }
+      const result = groupAccessModules.map(item => ({
+        id: item.id,
+        groupAccessId: item.groupAccessId,
         moduleId: item.moduleId,
         groupAccess: item.GroupAccess.name,
         module: item.Module.name,
@@ -25,7 +55,8 @@ class groupAccessModuleController {
         }
       }));
       res.status(200).json(result);
-    } catch (error) {
+    }
+    catch (error) {
       next(error);
     }
   }

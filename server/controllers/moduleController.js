@@ -14,6 +14,22 @@ class ModuleController {
     } 
   }
 
+  static async getModuleById(req, res, next) {
+    try {
+      const { id } = req.params;  
+      const module = await Module.findByPk(id, {
+        attributes: { exclude: ["createdAt", "updatedAt"] }
+      });
+      if (!module) {
+        throw { name: 'NotFound', message: 'Module not found' };
+      }
+      res.status(200).json(module);
+    } catch (error) {
+      console.log(error);
+      next(error);
+    }
+  }
+
   static async addModule(req, res, next) {
     try {
       const { code, name, routeName, icon, order, parentId, isActive } = req.body;
@@ -95,16 +111,6 @@ class ModuleController {
     res.status(200).json({ message: `Module ${name} updated successfully!` });
 
   } catch (error) {
-    console.log(error);
-    // Tangani error dari DB supaya client tahu
-    if (
-      error.name === 'SequelizeValidationError' || 
-      error.name === 'SequelizeDatabaseError' ||
-      error.name === 'Conflict' ||
-      error.name === 'NotFound'
-    ) {
-      return res.status(400).json({ message: error.message });
-    }
     next(error);
   }
 }

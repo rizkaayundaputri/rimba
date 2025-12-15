@@ -1,17 +1,52 @@
 <script setup>
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, Suspense } from 'vue'
 import { initRoutesFromDB } from './router'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const openSubmenu = ref(null)
+const isInitializing = ref(true)
 
 onMounted(async() => {
-  authStore.initAuth()
-  await initRoutesFromDB()  // pastikan semua routes dynamic terdaftar
-
+  
+  try {
+    // 1. Init auth & fetch user data jika ada token
+    if (authStore.access_token) {
+      await authStore.initAuth()
+    }
+    
+    // 2. Load dynamic routes dari database
+    await initRoutesFromDB()
+    
+    // 3. Wait for router to be fully ready
+    await router.isReady()
+    
+    // 4. Check current path AFTER router is ready
+    const currentPath = router.currentRoute.value.path
+    
+    // 5. Hanya redirect jika memang di root path
+    //  Cek apakah user sudah login dan saat ini berada di root path kosong
+    if (authStore.isLoggedIn && ( currentPath === '')) {
+      const firstModule = authStore.accessibleModules[0]
+      //Ambil modul pertama dari daftar modul yang bisa diakses user
+      if (firstModule?.routeName) {
+        //Cek apakah modul pertama punya properti routeName
+        //Redirect user ke route dari modul pertama
+        await router.push({ name: firstModule.routeName })
+      }
+    } else {
+      console.log(currentPath)
+    }
+    
+    console.log(' App ready')
+  } catch (error) {
+    console.error('Init error:', error)
+  } finally {
+    // Set isInitializing langsung tanpa delay
+    isInitializing.value = false
+  }
 })
 
 const handleLogout = () => {
@@ -20,23 +55,26 @@ const handleLogout = () => {
 }
 
 const toggleSubmenu = (moduleId) => {
+  // jika submenu yang diklik sama dengan yang sedang terbuka → tutup (set null)
+  // jika berbeda → buka submenu baru (set moduleId)
   openSubmenu.value = openSubmenu.value === moduleId ? null : moduleId
 }
 
-// Cek jika route ada di router
-const routeExists = (routeName) => {
+// Fungsi untuk mengecek apakah sebuah route dengan name tertentu terdaftar di router
+const routeExists = (routeName) => { //Sidebar render
   if (!routeName) return false
-  try {
-    router.resolve({ name: routeName })
-    return true
-  } catch (e) {
-    return false
-  }
+  return router.hasRoute(routeName) //cek semua route saat ini di router (static + dynamic yang sudah ditambahkan).router.hasRoute()
 }
 </script>
 
 <template>
-  <div id="app" :class="{ 'with-sidebar': authStore.isLoggedIn }">
+  <!-- Loading state saat initialization -->
+  <div v-if="isInitializing" class="loading-screen">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <div v-else id="app" :class="{ 'with-sidebar': authStore.isLoggedIn }">
     <!-- Sidebar - hanya muncul jika sudah login -->
     <aside v-if="authStore.isLoggedIn" class="sidebar">
       <div class="sidebar-header">
@@ -96,7 +134,17 @@ const routeExists = (routeName) => {
     </aside>
 
     <main class="main-content">
-      <router-view />
+      <Suspense>
+        <template #default>
+          <router-view :key="$route.fullPath" />
+        </template>
+        <template #fallback>
+          <div class="page-loading">
+            <div class="spinner-small"></div>
+            <p>Loading page...</p>
+          </div>
+        </template>
+      </Suspense>
     </main>
   </div>
 </template>
@@ -111,6 +159,54 @@ const routeExists = (routeName) => {
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f5f7fa;
+}
+
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+  color: white;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-screen p {
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.page-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: #2c3e50;
+}
+
+.spinner-small {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(44, 62, 80, 0.2);
+  border-top-color: #2c3e50;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 1rem;
 }
 
 #app {
@@ -207,21 +303,29 @@ body {
   width: 24px;
   font-size: 1.1rem;
   margin-right: 0.75rem;
+  text-align: center;
 }
 
 .menu-link span {
-  flex: 1;
+  text-align: left;
 }
 .menu-group .menu-link.parent {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-right: 1rem;
 }
 
 .menu-label {
   display: flex;
   align-items: center;
-  flex: 1;
+  text-align: left;
+}
+
+.menu-label i {
+  width: 24px;
+  text-align: center;
+  margin-right: 0.75rem;
 }
 
 .chevron {
@@ -254,6 +358,7 @@ body {
   text-decoration: none;
   font-size: 0.9rem;
   transition: all 0.3s ease;
+  text-align: left;
 }
 
 .submenu-link.disabled {

@@ -20,6 +20,7 @@ const router = createRouter({
 export async function initRoutesFromDB() {
   try {
     const { data } = await http.get('/route') // ambil semua modul aktif
+    
     data
       .filter(m => m.isActive)                 // hanya yang aktif
       .forEach(m => {
@@ -46,31 +47,29 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   const isLoggedIn = authStore.isLoggedIn
 
-    // Guest-only routes
-    if (to.meta.guest && isLoggedIn) {
-      // Redirect ke modul pertama user, atau login kalau ga ada modul
-      const firstModule = authStore.accessibleModules[0]
-      if (firstModule) return next({ name: firstModule.routeName })
-      return next({ name: 'login' })
-    }
+  // Guest-only routes (login page)
+  if (to.meta.guest && isLoggedIn) {
+    const firstModule = authStore.accessibleModules[0]
+    if (firstModule) return next({ name: firstModule.routeName })
+    return next({ name: 'login' })
+  }
 
-    // Protected routes
-    if (to.meta.requiresAuth && !isLoggedIn) {
-      return next({ name: 'login' })
-    }
+  // Protected routes
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    return next({ name: 'login' })
+  }
 
-    // Module-based access
-    if (to.meta.moduleCode && isLoggedIn) {
-    // Fetch modules jika belum ada
-    if (authStore.accessibleModules.length === 0 && authStore.token) {
+  // Module-based access control
+  if (to.meta.moduleCode && isLoggedIn) {
+    // Wait for modules to load if not yet available
+    if (authStore.accessibleModules.length === 0 && authStore.access_token) { // Token exists but modules not loaded
       await authStore.fetchUserData()
     }
 
-    // Cek permission module
-     if (!authStore.hasModuleAccess(to.meta.moduleCode)) {
-      // Redirect ke modul pertama user atau login jika tidak ada
-      const firstModule = authStore.accessibleModules[0]
-      if (firstModule) return next({ name: firstModule.routeName })
+    // Check if user has access to this module
+    if (!authStore.hasModuleAccess(to.meta.moduleCode)) {
+      const firstModule = authStore.accessibleModules[0] //Redirect to first accessible module
+      if (firstModule) return next({ name: firstModule.routeName }) 
       return next({ name: 'login' })
     }
   }
