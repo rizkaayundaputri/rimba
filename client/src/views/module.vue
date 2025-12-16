@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, onMounted , nextTick} from 'vue'
-import { useModuleStore } from '@/stores/moduleStore'
 import Swal from 'sweetalert2'
 
 // PrimeVue
@@ -11,6 +10,9 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Dropdown from 'primevue/dropdown'
 import Checkbox from 'primevue/checkbox'
+import { useModuleStore } from '@/stores/Module.store'
+
+
 
 
 const isSubmitting = ref(false)

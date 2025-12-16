@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import http from '@/libraries/http.js'
 import Swal from 'sweetalert2'
-import { useAuthStore } from './authStore'
+import { useAuthStore } from './Auth.store'
 
 export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => {
    const groupAccessModules = ref([])
@@ -59,12 +59,40 @@ export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => 
     }
   }
 
+  // ================= GET OR CREATE GROUP ACCESS =================
+  async function getOrCreateGroupAccess(groupName) {
+    try {
+      // Check if group exists
+      const response = await http.get('/group-access')
+      const existingGroup = response.data.find(
+        g => g.name.toLowerCase() === groupName.toLowerCase()
+      )
+      
+      if (existingGroup) {
+        return { success: true, id: existingGroup.id, created: false }
+      }
+      // Create new group access
+      const createRes = await http.post('/group-access', {
+        name: groupName,
+        description: ''
+      })
+      
+      return { success: true, id: createRes.data.id, created: true }
+    } catch (error) {
+      console.error('Error in getOrCreateGroupAccess:', error)
+      return { 
+        success: false, 
+        error: error.response?.data?.message || 'Gagal membuat group access'
+      }
+    }
+  }
+//==========================================================================
   async function createGroupAccessModule(moduleData) {
     try {
       const response = await http.post('/group-access-module', moduleData)
       await fetchGroupAccessModules()
       
-      // ✅ Refresh sidebar - update user permissions
+      //  Refresh sidebar - update user permissions
       const authStore = useAuthStore()
       await authStore.fetchUserData()
       
@@ -85,7 +113,7 @@ export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => 
       const response = await http.put(`/group-access-module/${id}`, moduleData)
       await fetchGroupAccessModules()
       
-      // ✅ Refresh sidebar - update user permissions
+      //  Refresh sidebar - update user permissions
       const authStore = useAuthStore()  // ambil store auth
       await authStore.fetchUserData()  //fetch ulang data user + modules
       
@@ -106,7 +134,7 @@ export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => 
       const response = await http.delete(`/group-access-module/${id}`)
       await fetchGroupAccessModules()
       
-      // ✅ Refresh sidebar - update user permissions
+      //  Refresh sidebar - update user permissions
       const authStore = useAuthStore()
       await authStore.fetchUserData()
       
@@ -127,6 +155,7 @@ export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => 
     loading.value = false
     error.value = null
   }
+  
   return {
     // State
     groupAccessModules, 
@@ -137,6 +166,7 @@ export const useGroupAccessModuleStore = defineStore('groupAccessModule', () => 
     getPermissions,
     // Actions
     fetchGroupAccessModules,
+    getOrCreateGroupAccess,
     createGroupAccessModule,
     updateGroupAccessModule,
     deleteGroupAccessModule,

@@ -1,6 +1,6 @@
 
-const { signToken } = require('../helpers/jwt')
-const {User, GroupAccess, Module, GroupAccessModule} = require('../models')
+const { signToken } = require('../helpers/Jwt.helper.js')
+const { User, GroupAccess, Module, GroupAccessModule } = require('../models/Index.js')
 class UserController{
 
   static async login(req,res,next){
@@ -29,10 +29,7 @@ class UserController{
 
       const access_token = signToken({id: userEmail.id})
       
-      res.status(200).json({
-        access_token
-      })
-
+      res.status(200).json({access_token})
       
     } catch (error) {
       next(error)

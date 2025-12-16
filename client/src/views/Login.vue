@@ -55,7 +55,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/authStore";
+import { useAuthStore } from "@/stores/Auth.store";
 import Swal from "sweetalert2";
 
 const router = useRouter();

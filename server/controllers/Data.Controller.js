@@ -1,5 +1,5 @@
-const {User} = require("../models")
-const {Hobby} = require("../models")
+const {User, Hobby} = require('../models/Index')
+
 
 class DataController{
  
@@ -10,8 +10,6 @@ class DataController{
       })
       res.status(200).json(data)
     } catch (error) {
-      console.log(error);
-      
       next(error)
     }
   }

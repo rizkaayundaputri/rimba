@@ -1,5 +1,5 @@
 <script setup>
-import { useHobbyStore } from "@/stores/hobbyStore";
+import { useHobbyStore } from "@/stores/Hobby.store";
 import { onMounted, computed } from "vue";
 
 const hobbyStore = useHobbyStore()

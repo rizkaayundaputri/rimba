@@ -3,8 +3,8 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import http from "@/libraries/http";
-import { useHobbyStore } from "@/stores/hobbyStore";
 import { storeToRefs } from "pinia" 
+import { useHobbyStore } from "@/stores/Hobby.store";
 
 const router = useRouter();
 const users = ref([]);

@@ -1,8 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import Swal from 'sweetalert2'
 import http from '@/libraries/http'
-import { useGroupAccessModuleStore } from '@/stores/groupAccessModuleStore'
 
 // PrimeVue
 import DataTable from 'primevue/datatable'
@@ -10,25 +8,72 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Dropdown from 'primevue/dropdown'
+import AutoComplete from 'primevue/autocomplete'
+import MultiSelect from 'primevue/multiselect'
 import Checkbox from 'primevue/checkbox'
+import Badge from 'primevue/badge'
+import OverlayPanel from 'primevue/overlaypanel'
+import InputText from 'primevue/inputtext'
+
+// Custom Components
+import AlertDialog from '@/components/Modal/AlertDialog.modal.vue'
+import ConfirmDialog from '@/components/Modal/ConfirmDialog.modal.vue'
+import { useGroupAccessModuleStore } from '@/stores/GroupAccessModule.store'
+
 
 // ================= STORE =================
-const store = useGroupAccessModuleStore()
+const store = useGroupAccessModuleStore() 
 
 // ================= DROPDOWN OPTIONS =================
-const groupAccessOptions = ref([])
-const moduleOptions = ref([])
+const groupAccessOptions = ref([])   // daftar nama group (string[])
+const moduleOptions = ref([])         // daftar module (label-value)
+const filteredGroupAccess = ref([])    // hasil filter autocomplete
 
 // ================= STATE =================
-const formVisible = ref(false)
-const formMode = ref('create')
-const selectedItem = ref(null)
-const isSubmitting = ref(false)
+const formVisible = ref(false)    // buka/tutup dialog
+const formMode = ref('create')    //  mode'create' | 'edit'
+const selectedItem = ref(null)   // data yg sedang di edit
+const isSubmitting = ref(false)  // cegah double submit
+const groupAccessInput = ref('')  // input autocomplete group access
+
+// Dialog states
+const alertDialog = ref({  //alert dialog state
+  visible: false,
+  type: 'info',
+  title: 'Alert',
+  message: ''
+})
+
+const confirmDialog = ref({
+  visible: false,
+  title: 'Confirm',
+  message: '',
+  onConfirm: null
+})
+
+function showAlert(type, title, message, autoClose = 0) {
+  alertDialog.value = {
+    visible: true,
+    type,
+    title,
+    message,
+    autoClose
+  }
+}
+
+function showConfirm(title, message, onConfirm) { // Simpan onConfirm → dipanggil saat user klik Confirm
+  confirmDialog.value = {
+    visible: true,
+    title,
+    message,
+    onConfirm
+  }
+}
 
 // ================= FORM DATA =================
 const formData = ref({
   groupAccessId: null,
-  moduleId: null,
+  moduleIds: [],
   canCreate: false,
   canRead: true,
   canUpdate: false,
@@ -38,30 +83,108 @@ const formData = ref({
 // ================= TABLE DATA =================
 const groupAccessModules = computed(() => store.groupAccessModules)
 
+// Group modules by groupAccessId for display
+//Kode ini mengubah data akses yang “flat” menjadi data yang terkelompok per Group Access agar mudah ditampilkan, diedit, dan dihapus.
+const groupedAccessModules = computed(() => {
+  const grouped = {}
+  
+  groupAccessModules.value.forEach(item => {
+    const key = item.groupAccessId //ambilkeynya berdasarkan groupAccessId
+    if (!grouped[key]) {  //jika gorupnya belum ada, buat baru
+      grouped[key] = {
+        groupAccessId: item.groupAccessId,
+        groupAccessName: item.groupAccessName,
+        modules: [],
+        permissions: {
+          canCreate: item.canCreate,
+          canRead: item.canRead,
+          canUpdate: item.canUpdate,
+          canDelete: item.canDelete
+        },
+        ids: [] //berisi ID dari tabel group_access_modules yang ada didalam modules (untuk edit/delete)
+      }
+    }
+    grouped[key].modules.push({ //Tambahkan module ke group
+      id: item.moduleId,
+      name: item.moduleName,
+      accessId: item.id // ID row akses (penting untuk delete/update)
+    })
+    grouped[key].ids.push(item.id) // Simpan ID akses untuk delete/edit
+  })
+  
+  return Object.values(grouped) // Ubah object menjadi array agar bisa dipakai di DataTable (v-for)
+})
+
+const moduleDetailPanel = ref()
+const selectedModuleDetail = ref([])
+
+function showModuleDetail(event, modules) { //event: mouse event, modules: array of module objects
+  selectedModuleDetail.value = modules //Simpan daftar module ke state reactive
+  moduleDetailPanel.value.toggle(event) //buka brosur tepat di tempat user klik
+}
+
+// ================= AUTOCOMPLETE =================
+function searchGroupAccess(event) {
+  // event → object dari PrimeVue AutoComplete
+  // event.query → teks yang sedang diketik user di input
+  const query = event.query.toLowerCase()
+  // Ubah input user ke huruf kecil → biar pencarian TIDAK case-sensitive 
+  if (!query) {
+    filteredGroupAccess.value = groupAccessOptions.value // Tampilkan SEMUA group access  Tampilkan SEMUA group access
+  } else { // Jika user SUDAH mengetik sesuatu
+    filteredGroupAccess.value = groupAccessOptions.value.filter(g => 
+      g.toLowerCase().includes(query)   // Ambil hanya group access yang: diubah ke lowercase, MENGANDUNG teks query
+    )
+  }
+}
+//------------------------create group-------------------
+async function quickAddGroup() {
+  const groupName = groupAccessInput.value?.trim()  // // Ambil teks dari input AutoComplete, hapus spasi di awal/akhir
+  
+  if (!groupName) {
+    showAlert('error', 'Validation Error', 'Nama group tidak boleh kosong')
+    return
+  }
+
+  try {
+    // Create group immediately
+    const createRes = await http.post('/group-access', {
+      name: groupName,
+      description: ''
+    })
+    
+    // Refresh dropdown options
+    await fetchDropdownData()
+    
+    // Set the newly created group as selected
+    formData.value.groupAccessId = createRes.data.id //   // Simpan ID group baru ke formData  → supaya saat submit, group ini yang dipakai
+    
+    // Close the autocomplete dropdown
+    filteredGroupAccess.value = []  //// Kosongkan suggestion agar dropdown tertutup
+    
+    showAlert('success', 'Success', `Group "${groupName}" berhasil dibuat`, 1500)
+
+  } catch (error) {
+    showAlert('error', 'Error', error.response?.data?.message || 'Gagal membuat group')
+  }
+}
+
 // ================= FETCH DROPDOWN =================
 async function fetchDropdownData() {
   try {
-    const [groupRes, moduleRes] = await Promise.all([
+    const [groupRes, moduleRes] = await Promise.all([   //Promise.all → request dijalankan bersamaan lebih cepat
       http.get('/group-access'),
       http.get('/module')
     ])
 
-    groupAccessOptions.value = groupRes.data.map(g => ({
-      label: g.name,
-      value: g.id
-    }))
+    groupAccessOptions.value = groupRes.data.map(g => g.name)
 
     moduleOptions.value = moduleRes.data.map(m => ({
       label: m.name,
       value: m.id
     }))
   } catch (err) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: 'Failed load dropdown data',
-      zIndex: 3000
-    })
+    showAlert('error', 'Error', 'Failed load dropdown data')
   }
 }
 
@@ -74,10 +197,11 @@ onMounted(async () => {
 // ================= OPEN CREATE =================
 function openCreateDialog() {
   formMode.value = 'create'
-  selectedItem.value = null
+  selectedItem.value = null //tidak ada data lama yang dibutuhkan
+  groupAccessInput.value = '' 
   formData.value = {
     groupAccessId: null,
-    moduleId: null,
+    moduleIds: [],
     canCreate: false,
     canRead: true,
     canUpdate: false,
@@ -89,89 +213,119 @@ function openCreateDialog() {
 // ================= OPEN EDIT =================
 function openEditDialog(row) {
   formMode.value = 'edit'
-  selectedItem.value = row
+  selectedItem.value = row // data yg sedang di edit butuh liat data lama 
+  groupAccessInput.value = row.groupAccessName //fetch nama group access
 
   formData.value = {
     groupAccessId: row.groupAccessId,
-    moduleId: row.moduleId,
-    canCreate: row.canCreate,
-    canRead: row.canRead,
-    canUpdate: row.canUpdate,
-    canDelete: row.canDelete
+    moduleIds: row.modules.map(m => m.id),//hasil: [2, 3, 5], → format WAJIB untuk PrimeVue MultiSelect,format WAJIB untuk PrimeVue MultiSelect
+    canCreate: row.permissions.canCreate, //
+    canRead: row.permissions.canRead,
+    canUpdate: row.permissions.canUpdate,
+    canDelete: row.permissions.canDelete
   }
 
-  formVisible.value = true
+  formVisible.value = true // → semua data sudah siap sebelum dialog muncul
 }
 
 // ================= SUBMIT =================
 async function handleSubmit() {
-  if (isSubmitting.value) return
-      // Cegah double submit: jika proses submit sedang berjalan, langsung return
-  if (!formData.value.groupAccessId || !formData.value.moduleId) {
-       //pastikan user memilih groupAccess & module
-    Swal.fire({
-      icon: 'error',
-      title: 'Validation Error',
-      text: 'Group Access & Module wajib dipilih',
-      zIndex: 3000
-    })
+  if (isSubmitting.value) return 
+  
+  // Validate
+  const groupName = typeof groupAccessInput.value === 'string' 
+    ? groupAccessInput.value.trim() 
+    : groupAccessInput.value
+    
+  if (!groupName || !formData.value.moduleIds || formData.value.moduleIds.length === 0) {
+    showAlert('error', 'Validation Error', 'Group Access & Module wajib dipilih')
     return
   }
 
   try {
     isSubmitting.value = true
-    // Tandai sedang submit untuk mencegah double submit
+    
+    // ✅ Get or create group access via store
+    const groupResult = await store.getOrCreateGroupAccess(groupName)
+    
+    if (!groupResult.success) {
+      throw new Error(groupResult.error)
+    }
+    
+    const groupAccessId = groupResult.id
+    
+    // Refresh dropdown if new group was created
+    if (groupResult.created) {
+      await fetchDropdownData()
+    }
+    
     if (formMode.value === 'create') {
-      await store.createGroupAccessModule(formData.value)
-      //Jika mode create → panggil API create
-    } else {
-      await store.updateGroupAccessModule(
-        selectedItem.value.id,
-        formData.value
-        // Jika mode edit → panggil API update
+      // Create multiple entries, one for each selected module
+      const promises = formData.value.moduleIds.map(moduleId => 
+        store.createGroupAccessModule({
+          groupAccessId,
+          moduleId,
+          canCreate: formData.value.canCreate,
+          canRead: formData.value.canRead,
+          canUpdate: formData.value.canUpdate,
+          canDelete: formData.value.canDelete
+        })
       )
+      await Promise.all(promises) //Menjalankan banyak async task secara BERSAMAAN, lalu nunggu sampai SEMUANYA selesai
+    } else {
+      // Edit mode: delete old entries and create new ones
+      // 1. Delete all existing entries for this group
+      const deletePromises = selectedItem.value.ids.map(id => 
+        store.deleteGroupAccessModule(id)
+      )
+      await Promise.all(deletePromises)
+      
+      // 2. Create new entries with updated data
+      const createPromises = formData.value.moduleIds.map(moduleId => 
+        store.createGroupAccessModule({
+          groupAccessId,
+          moduleId,
+          canCreate: formData.value.canCreate,
+          canRead: formData.value.canRead,
+          canUpdate: formData.value.canUpdate,
+          canDelete: formData.value.canDelete
+        })
+      )
+      await Promise.all(createPromises)
     }
 
     formVisible.value = false
     await nextTick()
-      //Tutup form dan tunggu DOM update
 
-    Swal.fire({
-      icon: 'success',
-      title: 'Success',
-      text: 'Data berhasil disimpan',
-      timer: 2000,
-      showConfirmButton: false,
-      zIndex: 3000
-    })
+    showAlert('success', 'Success', 'Data berhasil disimpan', 2000)
+  } catch (error) {
+    showAlert('error', 'Error', error.message || 'Gagal menyimpan data')
   } finally {
     isSubmitting.value = false
-    // Reset status submit agar bisa submit lagi
   }
 }
 
 // ================= DELETE =================
-async function handleDelete(row) {
-  const confirm = await Swal.fire({
-    title: 'Delete?',
-    html: `Hapus akses <b>${row.groupAccessName}</b> - <b>${row.moduleName}</b>?`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#dc3545',
-    zIndex: 3000
-  })
+function handleDelete(row) {
+  const modulesText = row.modules.length === 1 
+    ? row.modules[0].name 
+    : `${row.modules.length} modules`
+    
+  showConfirm(
+    'Delete?',
+    `Hapus akses <b>${row.groupAccessName}</b> (${modulesText})?`,
+    async () => {
+      try {
+        // Delete all module entries for this group access
+        const promises = row.ids.map(id => store.deleteGroupAccessModule(id))
+        await Promise.all(promises)
 
-  if (confirm.isConfirmed) {
-    await store.deleteGroupAccessModule(row.id)
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Deleted',
-      timer: 1500,
-      showConfirmButton: false,
-      zIndex: 3000
-    })
-  }
+        showAlert('success', 'Deleted', 'Data berhasil dihapus', 1500)
+      } catch (error) {
+        showAlert('error', 'Error', 'Gagal menghapus data')
+      }
+    }
+  )
 }
 </script>
 
@@ -184,21 +338,34 @@ async function handleDelete(row) {
     </div>
 
     <!-- TABLE -->
-    <DataTable :value="groupAccessModules" stripedRows>
+    <DataTable :value="groupedAccessModules" stripedRows>
       <Column header="No">
         <template #body="{ index }">{{ index + 1 }}</template>
       </Column>
 
       <Column field="groupAccessName" header="Group" />
-      <Column field="moduleName" header="Module" />
+      
+      <Column header="Module">
+        <template #body="{ data }">
+          <div v-if="data.modules.length === 1">
+            {{ data.modules[0].name }}
+          </div>
+          <div v-else>
+            <Badge 
+              :value="data.modules.length + ' modules'" 
+              severity="info" 
+              class="cursor-pointer"
+              @click="showModuleDetail($event, data.modules)"
+            />
+          </div>
+        </template>
+      </Column>
 
       <Column header="Permissions">
         <template #body="{ data }">
-          <!-- buat array, filter nilai true, hitung panjangnya -->
-          {{ [data.canCreate, data.canRead, data.canUpdate, data.canDelete].filter(Boolean).length }} 
+          {{ [data.permissions.canCreate, data.permissions.canRead, data.permissions.canUpdate, data.permissions.canDelete].filter(Boolean).length }} 
         </template>
       </Column> 
-
 
       <Column header="Actions">
         <template #body="{ data }">
@@ -220,6 +387,18 @@ async function handleDelete(row) {
       </Column>
     </DataTable>
 
+    <!-- Module Detail Overlay -->
+    <OverlayPanel ref="moduleDetailPanel">
+      <div class="module-detail-list">
+        <h4 style="margin-top: 0;">Modules:</h4>
+        <ul>
+          <li v-for="mod in selectedModuleDetail" :key="mod.id">
+            {{ mod.name }}
+          </li>
+        </ul>
+      </div>
+    </OverlayPanel>
+
     <!-- FORM DIALOG -->
     <Dialog
       v-model:visible="formVisible"
@@ -231,23 +410,40 @@ async function handleDelete(row) {
       <div class="form-grid">
         <div class="field">
           <label>Group Access</label>
-          <Dropdown
-            v-model="formData.groupAccessId"
-            :options="groupAccessOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Select Group"
-          />
+          <AutoComplete
+            v-model="groupAccessInput"
+            :suggestions="filteredGroupAccess"
+            @complete="searchGroupAccess"  
+            placeholder="Ketik nama group (baru/existing)"
+            :forceSelection="false"
+            
+          >
+            <template #empty>
+              <div class="autocomplete-empty">
+                <span class="empty-text">No results found</span>
+                <Button 
+                  label="+ Add Group" 
+                  size="small"
+                  severity="success"
+                  text
+                  @click="quickAddGroup"
+                />
+              </div>
+            </template>
+          </AutoComplete>
+          <small class="text-muted">Ketik nama group. Jika belum ada, akan otomatis dibuat saat save.</small>
         </div>
 
         <div class="field">
           <label>Module</label>
-          <Dropdown
-            v-model="formData.moduleId"
+          <MultiSelect
+            v-model="formData.moduleIds"
             :options="moduleOptions"
             optionLabel="label"
             optionValue="value"
-            placeholder="Select Module"
+            placeholder="Select Modules"
+            display="chip"
+            :maxSelectedLabels="3"
           />
         </div>
 
@@ -269,6 +465,23 @@ async function handleDelete(row) {
         />
       </template>
     </Dialog>
+    
+    <!-- Alert Dialog -->
+    <AlertDialog
+      v-model:visible="alertDialog.visible"
+      :type="alertDialog.type"
+      :title="alertDialog.title"
+      :message="alertDialog.message"
+      :autoClose="alertDialog.autoClose"
+    />
+    
+    <!-- Confirm Dialog -->
+    <ConfirmDialog
+      v-model:visible="confirmDialog.visible"
+      :title="confirmDialog.title"
+      :message="confirmDialog.message"
+      @confirm="confirmDialog.onConfirm"
+    />
   </div>
 </template>
 
@@ -316,5 +529,43 @@ async function handleDelete(row) {
   border-radius: 6px;
   font-size: 12px;
   margin-right: 4px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.module-detail-list ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.module-detail-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.module-detail-list li:last-child {
+  border-bottom: none;
+}
+
+.text-muted {
+  color: #6c757d;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.autocomplete-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+}
+
+.autocomplete-empty .empty-text {
+  color: #6c757d;
+  font-size: 13px;
 }
 </style>

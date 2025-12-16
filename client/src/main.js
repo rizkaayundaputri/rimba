@@ -11,7 +11,7 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
-import { useAuthStore } from './stores/authStore';
+import { useAuthStore } from './stores/Auth.store';
 
 const pinia = createPinia()
 const app = createApp(App)

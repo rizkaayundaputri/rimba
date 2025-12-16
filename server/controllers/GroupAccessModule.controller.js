@@ -1,4 +1,4 @@
-const {GroupAccessModule, Module, GroupAccess} = require('../models')
+const {GroupAccessModule, Module, GroupAccess} = require('../models/Index')
 
 class groupAccessModuleController {
   static async getGroupAccessModules(req, res, next) {

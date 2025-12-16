@@ -1,13 +1,32 @@
 <script setup>
-import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'vue-router'
-import { onMounted, ref, Suspense } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { initRoutesFromDB } from './router'
+import { useAuthStore } from './stores/Auth.store'
 
 const authStore = useAuthStore()
 const router = useRouter()
 const openSubmenu = ref(null)
 const isInitializing = ref(true)
+
+//  TAMBAHKAN WATCHER INI - Auto refresh sidebar saat accessibleModules berubah
+watch(
+  () => authStore.accessibleModules,
+  async (newModules, oldModules) => {
+    // Hanya re-init jika:
+    // 1. Bukan initial load (oldModules ada isinya)
+    // 2. Jumlah modules berubah
+    if (oldModules && oldModules.length > 0) {
+      const oldIds = oldModules.map(m => m.id).sort().join(',') // buat string dari ids
+      const newIds = newModules.map(m => m.id).sort().join(',')
+      
+      if (oldIds !== newIds) { // ada perubahan modules
+        await initRoutesFromDB() // re-init routes
+      }
+    }
+  },
+  { deep: true }
+)
 
 onMounted(async() => {
   
@@ -27,24 +46,18 @@ onMounted(async() => {
     const currentPath = router.currentRoute.value.path
     
     // 5. Hanya redirect jika memang di root path
-    //  Cek apakah user sudah login dan saat ini berada di root path kosong
-    if (authStore.isLoggedIn && ( currentPath === '')) {
+    if (authStore.isLoggedIn && (currentPath === '')) {
       const firstModule = authStore.accessibleModules[0]
-      //Ambil modul pertama dari daftar modul yang bisa diakses user
       if (firstModule?.routeName) {
-        //Cek apakah modul pertama punya properti routeName
-        //Redirect user ke route dari modul pertama
         await router.push({ name: firstModule.routeName })
       }
     } else {
-      console.log(currentPath)
+      console.log( currentPath)
     }
-    
-    console.log(' App ready')
+
   } catch (error) {
-    console.error('Init error:', error)
+    console.error( error)
   } finally {
-    // Set isInitializing langsung tanpa delay
     isInitializing.value = false
   }
 })
@@ -55,15 +68,12 @@ const handleLogout = () => {
 }
 
 const toggleSubmenu = (moduleId) => {
-  // jika submenu yang diklik sama dengan yang sedang terbuka → tutup (set null)
-  // jika berbeda → buka submenu baru (set moduleId)
   openSubmenu.value = openSubmenu.value === moduleId ? null : moduleId
 }
 
-// Fungsi untuk mengecek apakah sebuah route dengan name tertentu terdaftar di router
-const routeExists = (routeName) => { //Sidebar render
+const routeExists = (routeName) => {
   if (!routeName) return false
-  return router.hasRoute(routeName) //cek semua route saat ini di router (static + dynamic yang sudah ditambahkan).router.hasRoute()
+  return router.hasRoute(routeName)
 }
 </script>
 
@@ -92,7 +102,6 @@ const routeExists = (routeName) => { //Sidebar render
               :to="{ name: module.routeName }"
               class="menu-link"
             >
-              <i v-if="module.icon" :class="module.icon"></i>
               <span>{{ module.name }}</span>
             </router-link>
             
@@ -100,7 +109,6 @@ const routeExists = (routeName) => { //Sidebar render
             <div v-if="module.children && module.children.length > 0" class="menu-group">
               <div class="menu-link parent" @click="toggleSubmenu(module.id)">
                 <div class="menu-label">
-                  <i v-if="module.icon" :class="module.icon"></i>
                   <span>{{ module.name }}</span>
                 </div>
                 <i class="chevron" :class="{ 'open': openSubmenu === module.id }">▼</i>
@@ -115,7 +123,6 @@ const routeExists = (routeName) => { //Sidebar render
                   >
                     {{ child.name }}
                   </router-link>
-                  <!-- Show as text if route doesn't exist -->
                   <span v-else class="submenu-link disabled">
                     {{ child.name }}
                   </span>
@@ -134,17 +141,7 @@ const routeExists = (routeName) => { //Sidebar render
     </aside>
 
     <main class="main-content">
-      <Suspense>
-        <template #default>
-          <router-view :key="$route.fullPath" />
-        </template>
-        <template #fallback>
-          <div class="page-loading">
-            <div class="spinner-small"></div>
-            <p>Loading page...</p>
-          </div>
-        </template>
-      </Suspense>
+      <router-view :key="$route.fullPath" />
     </main>
   </div>
 </template>
@@ -299,21 +296,15 @@ body {
   font-weight: 600;
 }
 
-.menu-link i {
-  width: 24px;
-  font-size: 1.1rem;
-  margin-right: 0.75rem;
-  text-align: center;
-}
-
 .menu-link span {
   text-align: left;
 }
+
 .menu-group .menu-link.parent {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-right: 1rem;
+  padding: 0.875rem 1.5rem;
 }
 
 .menu-label {
@@ -322,16 +313,11 @@ body {
   text-align: left;
 }
 
-.menu-label i {
-  width: 24px;
-  text-align: center;
-  margin-right: 0.75rem;
-}
-
 .chevron {
   font-size: 0.7rem;
   transition: transform 0.3s ease;
   color: rgba(255, 255, 255, 0.6);
+  margin-left: auto;
 }
 
 .chevron.open {
@@ -377,6 +363,7 @@ body {
   color: #3498db;
   font-weight: 600;
 }
+
 .sidebar-footer {
   padding: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -443,3 +430,4 @@ body {
   }
 }
 </style>
+

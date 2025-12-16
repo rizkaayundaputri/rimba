@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/authStore'
+import { useAuthStore } from '@/stores/Auth.store'
 import http from '@/libraries/http'
 
 
@@ -66,11 +66,11 @@ router.beforeEach(async (to, from, next) => {
       await authStore.fetchUserData()
     }
 
-    // Check if user has access to this module
+    // Kalau user TIDAK punya akses ke module tujuan
     if (!authStore.hasModuleAccess(to.meta.moduleCode)) {
-      const firstModule = authStore.accessibleModules[0] //Redirect to first accessible module
-      if (firstModule) return next({ name: firstModule.routeName }) 
-      return next({ name: 'login' })
+      const firstModule = authStore.accessibleModules[0] // Ambil module pertama yang boleh diakses user
+      if (firstModule) return next({ name: firstModule.routeName }) // Kalau ada module yang boleh → redirect ke sana
+      return next({ name: 'login' })  // Kalau tidak ada akses sama sekali → lempar ke login
     }
   }
 

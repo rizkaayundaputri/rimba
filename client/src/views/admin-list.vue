@@ -47,7 +47,7 @@ onMounted(() => {
         <h2>Daftar Member</h2>
         <div 
           v-for="user in users"
-          :key="user.email"
+          :key="user.id"
           class="member-card"
         >
           <div class="member-info">
